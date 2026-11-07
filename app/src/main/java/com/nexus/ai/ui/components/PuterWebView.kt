@@ -31,6 +31,7 @@ fun PuterWebView(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.setSupportMultipleWindows(true)
+                settings.javaScriptCanOpenWindowsAutomatically = true
                 webViewClient = WebViewClient()
                 webChromeClient = WebChromeClient()
                 addJavascriptInterface(object {
@@ -41,7 +42,8 @@ fun PuterWebView(
                     @JavascriptInterface fun onImageGenerated(url: String) { onImageGenerated(url) }
                     @JavascriptInterface fun onVideoAnalyzed(clipsJson: String) { onVideoAnalyzedCallback(clipsJson) }
                 }, "AndroidBridge")
-                loadUrl("file:///android_asset/puter_bridge.html")
+                val htmlContent = context.assets.open("puter_bridge.html").bufferedReader().use { it.readText() }
+                loadDataWithBaseURL("https://nexus.ai", htmlContent, "text/html", "UTF-8", null)
                 onWebViewCreated(this)
             }
         }
