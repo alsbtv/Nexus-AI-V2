@@ -6,9 +6,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.*
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexus.ai.ui.components.AppDrawer
 import com.nexus.ai.ui.components.PuterWebView
@@ -38,7 +44,8 @@ fun NexusApp() {
     var isLoggedIn by remember { mutableStateOf(false) }
     var isWebViewVisible by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
-
+    var popupWebView by remember { mutableStateOf<WebView?>(null) }
+    
     val chatViewModel: ChatViewModel = viewModel()
     val drawerViewModel: DrawerViewModel = viewModel()
     var currentScreen by remember { mutableStateOf("chat") }
@@ -49,14 +56,12 @@ fun NexusApp() {
         if (chatViewModel.currentChatId == null) chatViewModel.startNewChat()
     }
 
-    LaunchedEffect(webView) { chatViewModel.webViewRef = webView }
-
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isLoggedIn) {
             LoginScreen(
-                onLoginClick = {
-                    isWebViewVisible = true
-                    webView?.evaluateJavascript("loginPuter()", null)
+                onLoginClick = { 
+                    isWebViewVisible = true 
+                    webView?.evaluateJavascript("loginPuter()", null) 
                 }
             )
         } else {
@@ -82,13 +87,13 @@ fun NexusApp() {
             }
         }
 
-        // الـ WebView يوضع في النهاية لكي يطفو فوق الواجهة عند الحاجة
         PuterWebView(
             isVisible = isWebViewVisible,
             onWebViewCreated = { webView = it },
-            onLoginSuccess = {
+            onPopupCreated = { popupWebView = it },
+            onLoginSuccess = { 
                 isWebViewVisible = false
-                isLoggedIn = true
+                isLoggedIn = true 
             },
             onLoginError = { isWebViewVisible = false },
             onResponse = { response -> chatViewModel.addAiMessage(response) },
@@ -96,5 +101,20 @@ fun NexusApp() {
             onImageGenerated = { url -> chatViewModel.addImageMessage(url) },
             onVideoAnalyzedCallback = { json -> chatViewModel.onVideoAnalyzedReceived(json) }
         )
+
+        if (popupWebView != null) {
+            Dialog(
+                onDismissRequest = { 
+                    popupWebView?.destroy()
+                    popupWebView = null 
+                }, 
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                AndroidView(
+                    factory = { popupWebView!! },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
     }
 }

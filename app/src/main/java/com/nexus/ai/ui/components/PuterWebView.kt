@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 fun PuterWebView(
     isVisible: Boolean,
     onWebViewCreated: (WebView) -> Unit,
+    onPopupCreated: (WebView) -> Unit,
     onLoginSuccess: (String) -> Unit,
     onLoginError: (String) -> Unit,
     onResponse: (String) -> Unit,
@@ -29,13 +30,13 @@ fun PuterWebView(
         modifier = if (isVisible) Modifier.fillMaxSize() else Modifier.size(1.dp),
         factory = { context ->
             WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.BLACK)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                settings.setSupportMultipleWindows(true)
                 settings.javaScriptCanOpenWindowsAutomatically = true
+                setBackgroundColor(android.graphics.Color.BLACK)
+                
                 webViewClient = WebViewClient()
-
+                
                 val popupWebView = WebView(context).apply {
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
@@ -47,10 +48,12 @@ fun PuterWebView(
                     override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
                         val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
                         transport.webView = popupWebView
+                        onPopupCreated(popupWebView)
                         resultMsg.sendToTarget()
                         return true
                     }
                 }
+                
                 addJavascriptInterface(object {
                     @JavascriptInterface fun onLoginSuccess(username: String) { onLoginSuccess(username) }
                     @JavascriptInterface fun onLoginError(error: String) { onLoginError(error) }
@@ -59,8 +62,10 @@ fun PuterWebView(
                     @JavascriptInterface fun onImageGenerated(url: String) { onImageGenerated(url) }
                     @JavascriptInterface fun onVideoAnalyzed(clipsJson: String) { onVideoAnalyzedCallback(clipsJson) }
                 }, "AndroidBridge")
+                
                 val htmlContent = context.assets.open("puter_bridge.html").bufferedReader().use { it.readText() }
                 loadDataWithBaseURL("https://nexus.ai", htmlContent, "text/html", "UTF-8", null)
+                
                 onWebViewCreated(this)
             }
         }
