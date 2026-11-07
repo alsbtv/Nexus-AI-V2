@@ -32,19 +32,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val newId = System.currentTimeMillis().toString()
         currentChatId = newId
         viewModelScope.launch {
-            chatDao.insertChat(ChatEntity(id = newId, title = "محادثة جديدة", timestamp = System.currentTimeMillis()))
+            try {
+                chatDao.insertChat(ChatEntity(id = newId, title = "محادثة جديدة", timestamp = System.currentTimeMillis()))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    fun loadChat(chatId: String) {
-        currentChatId = chatId
-    }
+    fun loadChat(chatId: String) { currentChatId = chatId }
 
-    // دالة مسح جميع المحادثات (دون المساس بالحساب)
     fun clearAllChats() {
         viewModelScope.launch {
-            db.clearAllTables() // يمسح كل الجداول (شات، رسائل، مثبتات)
-            startNewChat()      // يبدأ محادثة جديدة نظيفة
+            try {
+                db.clearAllTables()
+                startNewChat()
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -57,50 +58,46 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun addUserMessage(text: String, attachmentUri: String? = null) {
         val chatId = currentChatId ?: return
         viewModelScope.launch {
-            messageDao.insertMessage(MessageEntity(
-                id = System.currentTimeMillis().toString(),
-                chatId = chatId, text = text, isUser = true,
-                attachmentUri = attachmentUri, timestamp = System.currentTimeMillis()
-            ))
+            try {
+                messageDao.insertMessage(MessageEntity(id = System.currentTimeMillis().toString(), chatId = chatId, text = text, isUser = true, attachmentUri = attachmentUri, timestamp = System.currentTimeMillis()))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     fun addAiMessage(text: String) {
         val chatId = currentChatId ?: return
         viewModelScope.launch {
-            messageDao.insertMessage(MessageEntity(
-                id = System.currentTimeMillis().toString(),
-                chatId = chatId, text = text, isUser = false, timestamp = System.currentTimeMillis()
-            ))
+            try {
+                messageDao.insertMessage(MessageEntity(id = System.currentTimeMillis().toString(), chatId = chatId, text = text, isUser = false, timestamp = System.currentTimeMillis()))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     fun addImageMessage(imageUrl: String) {
         val chatId = currentChatId ?: return
         viewModelScope.launch {
-            messageDao.insertMessage(MessageEntity(
-                id = System.currentTimeMillis().toString(),
-                chatId = chatId, text = imageUrl, isUser = false,
-                isImage = true, timestamp = System.currentTimeMillis()
-            ))
+            try {
+                messageDao.insertMessage(MessageEntity(id = System.currentTimeMillis().toString(), chatId = chatId, text = imageUrl, isUser = false, isImage = true, timestamp = System.currentTimeMillis()))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     fun editMessage(messageId: String, currentText: String, newText: String, existingHistory: String) {
         viewModelScope.launch {
-            val historyList = if (existingHistory.isBlank()) mutableListOf() else existingHistory.split("||").toMutableList()
-            historyList.add(currentText)
-            while (historyList.size > 5) { historyList.removeAt(0) }
-            messageDao.updateMessage(messageId, newText, historyList.joinToString("||"))
+            try {
+                val historyList = if (existingHistory.isBlank()) mutableListOf() else existingHistory.split("||").toMutableList()
+                historyList.add(currentText)
+                while (historyList.size > 5) { historyList.removeAt(0) }
+                messageDao.updateMessage(messageId, newText, historyList.joinToString("||"))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     fun addPin(chatId: String, messageId: String, pinName: String) {
         viewModelScope.launch {
-            pinDao.insertPin(PinnedMessageEntity(
-                id = System.currentTimeMillis().toString(),
-                chatId = chatId, messageId = messageId, pinName = pinName, timestamp = System.currentTimeMillis()
-            ))
+            try {
+                pinDao.insertPin(PinnedMessageEntity(id = System.currentTimeMillis().toString(), chatId = chatId, messageId = messageId, pinName = pinName, timestamp = System.currentTimeMillis()))
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -113,7 +110,5 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    fun onVideoAnalyzedReceived(clipsJson: String) {
-        isGeneratingVideo = false
-    }
+    fun onVideoAnalyzedReceived(clipsJson: String) { isGeneratingVideo = false }
 }

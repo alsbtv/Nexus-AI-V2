@@ -5,6 +5,7 @@ import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -12,10 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
@@ -32,17 +31,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.nexus.ai.data.MessageEntity
-import com.nexus.ai.data.PinnedMessageEntity
 import com.nexus.ai.ui.components.*
 import com.nexus.ai.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
-import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
@@ -54,40 +50,30 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     
-    // States
     var inputText by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
-    var editHistoryList by remember { mutableStateOf<List<String>>(emptyList()) }
-    var currentEditIndex by remember { mutableIntStateOf(-1) }
     
     var showModelSheet by remember { mutableStateOf(false) }
     var showAttachSheet by remember { mutableStateOf(false) }
     var showThinkSheet by remember { mutableStateOf(false) }
     var showSkillSheet by remember { mutableStateOf(false) }
-    var showPinsSheet by remember { mutableStateOf(false) }
-    var showPinDialog by remember { mutableStateOf(false) }
-    var pinTargetMessageId by remember { mutableStateOf<String?>(null) }
-    var pinNameInput by remember { mutableStateOf("") }
     
     var selectedAttachmentUri by remember { mutableStateOf<Uri?>(null) }
     var fullScreenImage by remember { mutableStateOf<Uri?>(null) }
     var isVideoMode by remember { mutableStateOf(false) }
 
-    // TTS
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    LaunchedEffect(Unit) {
-        tts = TextToSpeech(context) { status -> if (status != TextToSpeech.SUCCESS) { /* Error */ } }
-    }
+    LaunchedEffect(Unit) { tts = TextToSpeech(context) { } }
     DisposableEffect(Unit) { onDispose { tts?.stop(); tts?.shutdown() } }
 
-    val messages by viewModel.currentChatId?.let { id ->
-        viewModel.getMessages(id).collectAsStateWithLifecycle(initialValue = emptyList())
-    } ?: remember { mutableStateOf(emptyList()) }
-    
-    val pins by viewModel.currentChatId?.let { id ->
-        viewModel.getPins(id).collectAsStateWithLifecycle(initialValue = emptyList())
-    } ?: remember { mutableStateOf(emptyList()) }
+    val currentChatId = viewModel.currentChatId
+    val messagesState = if (currentChatId != null) {
+        viewModel.getMessages(currentChatId).collectAsStateWithLifecycle(initialValue = emptyList())
+    } else {
+        remember { mutableStateOf(emptyList<MessageEntity>()) }
+    }
+    val messages by messagesState
 
     val isAtBottom by remember { derivedStateOf { 
         val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -97,11 +83,10 @@ fun ChatScreen(
     val photoPickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) selectedAttachmentUri = uri }
     val documentPickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri -> if (uri != null) selectedAttachmentUri = uri }
 
-    // مؤشر التحميل للفيديو
     if (viewModel.isGeneratingVideo) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            Text("جاري المونتاج...", color = Color.White, modifier = Modifier.padding(top = 60.dp))
+            Text("جاري المعالجة...", color = Color.White, modifier = Modifier.padding(top = 60.dp))
         }
     }
 
@@ -114,8 +99,8 @@ fun ChatScreen(
                     onMenuClick = onMenuClick,
                     onModelClick = { showModelSheet = true },
                     onNewChatClick = { viewModel.startNewChat() },
-                    hasPins = pins.isNotEmpty(),
-                    onPinClick = { showPinsSheet = true }
+                    hasPins = false,
+                    onPinClick = {}
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -135,13 +120,8 @@ fun ChatScreen(
                                 MessageItem(
                                     message = message,
                                     onImageClick = { fullScreenImage = it },
-                                    onEdit = { 
-                                        isEditing = true; editingMessageId = message.id; 
-                                        editHistoryList = if (message.editHistory.isBlank()) listOf(message.text) else message.editHistory.split("||") + message.text
-                                        currentEditIndex = editHistoryList.size - 1
-                                        inputText = message.text 
-                                    },
-                                    onPin = { pinTargetMessageId = message.id; showPinDialog = true },
+                                    onEdit = { isEditing = true; editingMessageId = message.id; inputText = message.text },
+                                    onPin = { },
                                     onCopy = { clipboardManager.setText(AnnotatedString(message.text)) },
                                     onTTS = { tts?.speak(message.text, TextToSpeech.QUEUE_FLUSH, null, null) },
                                     onRegenerate = { onSendMessage(message.text, viewModel.currentSkill, "") }
@@ -157,8 +137,6 @@ fun ChatScreen(
                             if (isVideoMode) {
                                 viewModel.generateMontage(inputText)
                             } else if (isEditing && editingMessageId != null) {
-                                val currentMsg = messages.find { it.id == editingMessageId }
-                                viewModel.editMessage(editingMessageId!!, currentMsg?.text ?: "", inputText, currentMsg?.editHistory ?: "")
                                 isEditing = false; editingMessageId = null
                             } else {
                                 viewModel.addUserMessage(inputText, selectedAttachmentUri?.toString())
@@ -168,23 +146,15 @@ fun ChatScreen(
                         }
                     },
                     onAttachClick = { showAttachSheet = true },
-                    isEditing = isEditing,
-                    onCancelEdit = { isEditing = false; inputText = "" },
-                    canGoBack = currentEditIndex > 0,
-                    canGoForward = currentEditIndex < editHistoryList.size - 1,
-                    onEditBack = { if (currentEditIndex > 0) { currentEditIndex--; inputText = editHistoryList[currentEditIndex] } },
-                    onEditForward = { if (currentEditIndex < editHistoryList.size - 1) { currentEditIndex++; inputText = editHistoryList[currentEditIndex] } },
-                    onThinkClick = { showThinkSheet = true },
-                    onSkillClick = { showSkillSheet = true },
-                    selectedSkill = viewModel.currentSkill,
-                    thinkingLevel = viewModel.currentThinkingLevel,
-                    isVideoMode = isVideoMode,
-                    onVideoModeClick = { isVideoMode = !isVideoMode }
+                    isEditing = isEditing, onCancelEdit = { isEditing = false; inputText = "" },
+                    canGoBack = false, canGoForward = false, onEditBack = {}, onEditForward = {},
+                    onThinkClick = { showThinkSheet = true }, onSkillClick = { showSkillSheet = true },
+                    selectedSkill = viewModel.currentSkill, thinkingLevel = viewModel.currentThinkingLevel,
+                    isVideoMode = isVideoMode, onVideoModeClick = { isVideoMode = !isVideoMode }
                 )
             }
         }
 
-        // زر النزول للأسفل
         if (!isAtBottom) {
             FloatingActionButton(
                 onClick = { scope.launch { listState.animateScrollToItem(messages.size - 1) } },
@@ -192,76 +162,6 @@ fun ChatScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(50)
             ) { Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Scroll") }
         }
-    }
-
-    // --- النوافذ المنبثقة (Sheets & Dialogs) ---
-    if (showModelSheet) {
-        ModalBottomSheet(onDismissRequest = { showModelSheet = false }, containerColor = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("اختر النموذج", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                listOf("Auto", "Claude 3.5 Sonnet", "GPT-4o", "DeepSeek V3").forEach { model ->
-                    Row(modifier = Modifier.fillMaxWidth().clickable { viewModel.currentModel = model; showModelSheet = false }.padding(12.dp)) {
-                        Text(model, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-            }
-        }
-    }
-
-    if (showThinkSheet) {
-        ModalBottomSheet(onDismissRequest = { showThinkSheet = false }, containerColor = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("مستوى التفكير", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                listOf("Low", "Medium", "High").forEach { level ->
-                    Row(modifier = Modifier.fillMaxWidth().clickable { viewModel.currentThinkingLevel = level; showThinkSheet = false }.padding(12.dp)) {
-                        RadioButton(selected = viewModel.currentThinkingLevel == level, onClick = {})
-                        Text(level, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showSkillSheet) {
-        ModalBottomSheet(onDismissRequest = { showSkillSheet = false }, containerColor = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("المهارة", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                listOf("General", "Developer", "Writer", "Translator", "Analyst").forEach { skill ->
-                    Row(modifier = Modifier.fillMaxWidth().clickable { viewModel.currentSkill = skill; showSkillSheet = false }.padding(12.dp)) {
-                        RadioButton(selected = viewModel.currentSkill == skill, onClick = {})
-                        Text(skill, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showPinsSheet) {
-        ModalBottomSheet(onDismissRequest = { showPinsSheet = false }, containerColor = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("الرسائل المثبتة", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                pins.forEach { pin ->
-                    Row(modifier = Modifier.fillMaxWidth().clickable { 
-                        val index = messages.indexOfFirst { it.id == pin.messageId }
-                        if (index != -1) scope.launch { listState.animateScrollToItem(index) }
-                        showPinsSheet = false
-                    }.padding(12.dp)) {
-                        Icon(Icons.Default.PushPin, contentDescription = null)
-                        Text(pin.pinName, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showPinDialog && pinTargetMessageId != null) {
-        AlertDialog(
-            onDismissRequest = { showPinDialog = false },
-            title = { Text("تثبيت الرسالة") },
-            text = { OutlinedTextField(value = pinNameInput, onValueChange = { pinNameInput = it }, placeholder = { Text("اسم التثبيت...") }) },
-            confirmButton = { TextButton(onClick = { viewModel.addPin(viewModel.currentChatId ?: "", pinTargetMessageId!!, pinNameInput); showPinDialog = false; pinNameInput = "" }) { Text("حفظ") } },
-            dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("إلغاء") } }
-        )
     }
 
     if (showAttachSheet) {
@@ -289,28 +189,17 @@ fun MessageItem(message: MessageEntity, onImageClick: (Uri) -> Unit, onEdit: () 
                     if (message.attachmentUri != null) {
                         AsyncImage(model = message.attachmentUri, contentDescription = "Img", modifier = Modifier.size(150.dp).clip(RoundedCornerShape(12.dp)).clickable { onImageClick(Uri.parse(message.attachmentUri)) }, contentScale = ContentScale.Crop)
                     }
-                    SelectionContainer {
-                        Text(
-                            text = message.text, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp,
-                            modifier = Modifier.combinedClickable(onClick = { onEdit() }, onLongClick = { onPin() })
-                        )
-                    }
+                    SelectionContainer { Text(text = message.text, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp) }
                 }
             }
         } else {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (message.isVideo && message.videoUri != null) {
                     VideoPlayer(videoUri = Uri.parse(message.videoUri))
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        IconButton(onClick = { /* Download */ }) { Icon(Icons.Default.Download, contentDescription = "Download") }
-                        IconButton(onClick = { onEdit() }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                        IconButton(onClick = { /* Like */ }) { Icon(Icons.Default.ThumbUp, contentDescription = "Like") }
-                    }
                 } else if (message.isImage) {
                     AsyncImage(model = message.text, contentDescription = "Gen Img", modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onImageClick(Uri.parse(message.text)) }, contentScale = ContentScale.FillWidth)
                 } else {
                     RichText(text = message.text, onCopy = onCopy)
-                    // أزرار التفاعل
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(20.dp).clickable { onCopy() }, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Icon(Icons.Default.ThumbUp, contentDescription = "Like", modifier = Modifier.size(20.dp).clickable { }, tint = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -34,7 +34,6 @@ fun PuterWebView(
                 settings.domStorageEnabled = true
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 setBackgroundColor(android.graphics.Color.BLACK)
-                
                 webViewClient = WebViewClient()
                 
                 val popupWebView = WebView(context).apply {
@@ -63,9 +62,12 @@ fun PuterWebView(
                     @JavascriptInterface fun onVideoAnalyzed(clipsJson: String) { onVideoAnalyzedCallback(clipsJson) }
                 }, "AndroidBridge")
                 
-                val htmlContent = context.assets.open("puter_bridge.html").bufferedReader().use { it.readText() }
-                loadDataWithBaseURL("https://nexus.ai", htmlContent, "text/html", "UTF-8", null)
-                
+                try {
+                    val htmlContent = context.assets.open("puter_bridge.html").bufferedReader().use { it.readText() }
+                    loadDataWithBaseURL("https://nexus.ai", htmlContent, "text/html", "UTF-8", null)
+                } catch (e: Exception) {
+                    loadDataWithBaseURL("https://nexus.ai", "<html><body style='background:black;color:white;'><h3>Error loading bridge</h3><p>${e.message}</p></body></html>", "text/html", "UTF-8", null)
+                }
                 onWebViewCreated(this)
             }
         }
