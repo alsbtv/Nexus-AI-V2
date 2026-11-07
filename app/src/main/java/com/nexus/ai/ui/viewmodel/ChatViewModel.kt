@@ -6,10 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.nexus.ai.data.AppDatabase
-import com.nexus.ai.data.ChatEntity
-import com.nexus.ai.data.MessageEntity
-import com.nexus.ai.data.PinnedMessageEntity
+import com.nexus.ai.data.*
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,7 +17,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val chatDao = db.chatDao()
     private val pinDao = db.pinnedMessageDao()
     
-    var currentChatId: String? = null
+    var currentChatId by mutableStateOf<String?>(null)
         private set
         
     var currentSkill by mutableStateOf("General")
@@ -41,6 +38,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadChat(chatId: String) {
         currentChatId = chatId
+    }
+
+    // دالة مسح جميع المحادثات (دون المساس بالحساب)
+    fun clearAllChats() {
+        viewModelScope.launch {
+            db.clearAllTables() // يمسح كل الجداول (شات، رسائل، مثبتات)
+            startNewChat()      // يبدأ محادثة جديدة نظيفة
+        }
     }
 
     fun getMessages(chatId: String) = messageDao.getMessagesForChat(chatId)

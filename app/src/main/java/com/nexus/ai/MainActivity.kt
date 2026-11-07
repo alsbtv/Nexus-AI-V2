@@ -5,14 +5,15 @@ import android.os.Bundle
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -21,7 +22,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexus.ai.ui.components.AppDrawer
 import com.nexus.ai.ui.components.PuterWebView
 import com.nexus.ai.ui.screens.ChatScreen
-import com.nexus.ai.ui.screens.LoginScreen
 import com.nexus.ai.ui.screens.SettingsScreen
 import com.nexus.ai.ui.theme.NexusTheme
 import com.nexus.ai.ui.viewmodel.ChatViewModel
@@ -46,7 +46,6 @@ fun NexusApp() {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("NexusPrefs", Context.MODE_PRIVATE)
     
-    // حفظ حالة الدخول
     var isLoggedIn by remember { mutableStateOf(prefs.getBoolean("is_logged_in", false)) }
     var isWebViewVisible by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
@@ -58,40 +57,37 @@ fun NexusApp() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn && chatViewModel.currentChatId == null) {
-            chatViewModel.startNewChat()
-        }
+    LaunchedEffect(Unit) {
+        if (chatViewModel.currentChatId == null) chatViewModel.startNewChat()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (!isLoggedIn) {
-            LoginScreen(
+        if (currentScreen == "settings") {
+            SettingsScreen(
+                isLoggedIn = isLoggedIn,
                 onLoginClick = { 
                     isWebViewVisible = true 
                     webView?.evaluateJavascript("loginPuter()", null) 
-                }
+                },
+                onClearChats = { chatViewModel.clearAllChats() },
+                onBackClick = { currentScreen = "chat" }
             )
         } else {
-            if (currentScreen == "settings") {
-                SettingsScreen(onBackClick = { currentScreen = "chat" })
-            } else {
-                AppDrawer(
-                    drawerState = drawerState,
-                    viewModel = drawerViewModel,
-                    onNavigateToSettings = { scope.launch { drawerState.close() }; currentScreen = "settings" },
-                    onNewChatClick = { scope.launch { drawerState.close() }; chatViewModel.startNewChat() },
-                    onChatSelect = { id -> chatViewModel.loadChat(id) }
-                ) {
-                    ChatScreen(
-                        viewModel = chatViewModel,
-                        onMenuClick = { scope.launch { drawerState.open() } },
-                        onSendMessage = { message, skill, sysPrompt ->
-                            val safeMsg = message.replace("'", "\\'")
-                            webView?.evaluateJavascript("askPuter('$safeMsg', 'Auto', '$sysPrompt')", null)
-                        }
-                    )
-                }
+            AppDrawer(
+                drawerState = drawerState,
+                viewModel = drawerViewModel,
+                onNavigateToSettings = { scope.launch { drawerState.close() }; currentScreen = "settings" },
+                onNewChatClick = { scope.launch { drawerState.close() }; chatViewModel.startNewChat() },
+                onChatSelect = { id -> chatViewModel.loadChat(id) }
+            ) {
+                ChatScreen(
+                    viewModel = chatViewModel,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onSendMessage = { message, skill, sysPrompt ->
+                        val safeMsg = message.replace("'", "\\'")
+                        webView?.evaluateJavascript("askPuter('$safeMsg', 'Auto', '$sysPrompt')", null)
+                    }
+                )
             }
         }
 
@@ -111,18 +107,31 @@ fun NexusApp() {
             onVideoAnalyzedCallback = { json -> chatViewModel.onVideoAnalyzedReceived(json) }
         )
 
+        if (isWebViewVisible) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                IconButton(
+                    onClick = { isWebViewVisible = false; popupWebView?.destroy(); popupWebView = null },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                }
+            }
+        }
+
         if (popupWebView != null) {
             Dialog(
-                onDismissRequest = { 
-                    popupWebView?.destroy()
-                    popupWebView = null 
-                }, 
+                onDismissRequest = { popupWebView?.destroy(); popupWebView = null }, 
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                AndroidView(
-                    factory = { popupWebView!! },
-                    modifier = Modifier.fillMaxSize()
-                )
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                    AndroidView(factory = { popupWebView!! }, modifier = Modifier.fillMaxSize())
+                    IconButton(
+                        onClick = { popupWebView?.destroy(); popupWebView = null },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
             }
         }
     }
