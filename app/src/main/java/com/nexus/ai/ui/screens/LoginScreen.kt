@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -29,11 +28,8 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text(
-                text = "تسجيل الدخول عبر Puter",
-                fontSize = 16.sp,
-                textDirection = TextDirection.Rtl
-            )
+            // محارف RLE (U+202B) و PDF (U+202C) لإجبار النص العربي على البداية
+            Text("\u202Bتسجيل الدخول عبر Puter\u202C", fontSize = 16.sp)
         }
     }
 }
