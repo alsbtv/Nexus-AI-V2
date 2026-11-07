@@ -15,19 +15,27 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // [إضافة لتقليل الحجم]: دعم الهواتف فقط (استبعاد المحاكيات)
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
-        }
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
     }
 
     buildTypes {
         release {
+            // [إضافة لتقليل الحجم]: تفعيل ضغط الأكواد وحذف الموارد غير المستخدمة
             isMinifyEnabled = true
             isShrinkResources = true
+
+            // [إضافة هامة جداً]: توقيع نسخة الـ Release بمفتاح الديباج
+            // لكي يتمكن الهاتف من تثبيتها وتحديثها فوق النسخة القديمة دون مسح البيانات
+            signingConfig = signingConfigs.getByName("debug")
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
