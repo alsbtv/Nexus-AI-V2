@@ -51,6 +51,7 @@ android {
 }
 
 dependencies {
+    // Core & Compose
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -62,13 +63,21 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
-    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // Media & Video (ExoPlayer & Coil)
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
-    implementation("com.arthenica:ffmpeg-kit-full:6.0-2.LTS")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Networking & JSON
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // FFmpeg (النسخة الجديدة التي تعمل)
+    implementation("dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7")
 }
