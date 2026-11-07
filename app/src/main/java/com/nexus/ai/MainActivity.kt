@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,7 +38,7 @@ fun NexusApp() {
     var isLoggedIn by remember { mutableStateOf(false) }
     var isWebViewVisible by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
-    
+
     val chatViewModel: ChatViewModel = viewModel()
     val drawerViewModel: DrawerViewModel = viewModel()
     var currentScreen by remember { mutableStateOf("chat") }
@@ -50,48 +51,50 @@ fun NexusApp() {
 
     LaunchedEffect(webView) { chatViewModel.webViewRef = webView }
 
-    // الـ WebView يعيش هنا دائماً
-    PuterWebView(
-        isVisible = isWebViewVisible,
-        onWebViewCreated = { webView = it },
-        onLoginSuccess = { 
-            isWebViewVisible = false
-            isLoggedIn = true 
-        },
-        onLoginError = { isWebViewVisible = false },
-        onResponse = { response -> chatViewModel.addAiMessage(response) },
-        onModelsLoaded = { },
-        onImageGenerated = { url -> chatViewModel.addImageMessage(url) },
-        onVideoAnalyzedCallback = { json -> chatViewModel.onVideoAnalyzedReceived(json) }
-    )
-
-    if (!isLoggedIn) {
-        LoginScreen(
-            onLoginClick = { 
-                isWebViewVisible = true 
-                webView?.evaluateJavascript("loginPuter()", null) 
-            }
-        )
-    } else {
-        if (currentScreen == "settings") {
-            SettingsScreen(onBackClick = { currentScreen = "chat" })
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (!isLoggedIn) {
+            LoginScreen(
+                onLoginClick = {
+                    isWebViewVisible = true
+                    webView?.evaluateJavascript("loginPuter()", null)
+                }
+            )
         } else {
-            AppDrawer(
-                drawerState = drawerState,
-                viewModel = drawerViewModel,
-                onNavigateToSettings = { scope.launch { drawerState.close() }; currentScreen = "settings" },
-                onNewChatClick = { scope.launch { drawerState.close() }; chatViewModel.startNewChat() },
-                onChatSelect = { id -> chatViewModel.loadChat(id) }
-            ) {
-                ChatScreen(
-                    viewModel = chatViewModel,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onSendMessage = { message, skill, sysPrompt ->
-                        val safeMsg = message.replace("'", "\\'")
-                        webView?.evaluateJavascript("askPuter('$safeMsg', 'Auto', '$sysPrompt')", null)
-                    }
-                )
+            if (currentScreen == "settings") {
+                SettingsScreen(onBackClick = { currentScreen = "chat" })
+            } else {
+                AppDrawer(
+                    drawerState = drawerState,
+                    viewModel = drawerViewModel,
+                    onNavigateToSettings = { scope.launch { drawerState.close() }; currentScreen = "settings" },
+                    onNewChatClick = { scope.launch { drawerState.close() }; chatViewModel.startNewChat() },
+                    onChatSelect = { id -> chatViewModel.loadChat(id) }
+                ) {
+                    ChatScreen(
+                        viewModel = chatViewModel,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onSendMessage = { message, skill, sysPrompt ->
+                            val safeMsg = message.replace("'", "\\'")
+                            webView?.evaluateJavascript("askPuter('$safeMsg', 'Auto', '$sysPrompt')", null)
+                        }
+                    )
+                }
             }
         }
+
+        // الـ WebView يوضع في النهاية لكي يطفو فوق الواجهة عند الحاجة
+        PuterWebView(
+            isVisible = isWebViewVisible,
+            onWebViewCreated = { webView = it },
+            onLoginSuccess = {
+                isWebViewVisible = false
+                isLoggedIn = true
+            },
+            onLoginError = { isWebViewVisible = false },
+            onResponse = { response -> chatViewModel.addAiMessage(response) },
+            onModelsLoaded = { },
+            onImageGenerated = { url -> chatViewModel.addImageMessage(url) },
+            onVideoAnalyzedCallback = { json -> chatViewModel.onVideoAnalyzedReceived(json) }
+        )
     }
 }

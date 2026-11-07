@@ -21,14 +21,22 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun NexusTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun NexusTheme(
+    darkTheme: Boolean = true, // إجبار الوضع الداكن
+    content: @Composable () -> Unit
+) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            // شريط حالة شفاف
             window.statusBarColor = android.graphics.Color.TRANSPARENT
+            // إخفاء الأيقونات البيضاء في الوضع الداكن
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+
+            // جعل التطبيق يمتد خلف شريط الحالة (Edge-to-Edge)
+            WindowCompat.setDecorFitsSystemWindows(window, false)
         }
     }
     MaterialTheme(colorScheme = colorScheme, content = content)

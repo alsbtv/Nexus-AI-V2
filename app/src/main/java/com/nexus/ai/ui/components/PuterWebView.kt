@@ -28,6 +28,7 @@ fun PuterWebView(
         modifier = if (isVisible) Modifier.fillMaxSize() else Modifier.size(1.dp),
         factory = { context ->
             WebView(context).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.setSupportMultipleWindows(true)
