@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+        Object.defineProperty(navigator, 'userActivation', { get: () => ({ isActive: true }) });
+        function loginPuter() {
+            puter.auth.signIn().then(() => { AndroidBridge.onLoginSuccess(puter.auth.getUsername()); })
+            .catch((err) => { AndroidBridge.onLoginError(err.message); });
+        }
+        function getModels() {
+            puter.ai.listModels().then((models) => { AndroidBridge.onModelsLoaded(JSON.stringify(models)); })
+            .catch((err) => { AndroidBridge.onModelsLoaded("[]"); });
+        }
+        function askPuter(message, modelName, systemPrompt) {
+            let options = {};
+            if (modelName && modelName !== "Auto") options.model = modelName;
+            let finalMessage = message;
+            if (systemPrompt) finalMessage = systemPrompt + "\n\nUser: " + message;
+            puter.ai.chat(finalMessage, options).then((response) => { AndroidBridge.onPuterResponse(response.message.content); })
+            .catch((err) => { AndroidBridge.onPuterResponse("Error: " + err.message); });
+        }
+        function generateImage(prompt) {
+            puter.ai.txt2img(prompt).then((image) => { AndroidBridge.onImageGenerated(image.src); })
+            .catch((err) => { AndroidBridge.onPuterResponse("Error: " + err.message); });
+        }
+        function analyzeVideoForMontage(videoUrl) {
+            puter.ai.chat("Analyze this video. Find top 3 action moments. Return ONLY JSON: [{\"start\": 5, \"end\": 10}]", videoUrl)
+            .then((response) => { AndroidBridge.onVideoAnalyzed(response.message.content); })
+            .catch((err) => { AndroidBridge.onVideoAnalyzed("[]"); });
+        }
+    </script>
+</head>
+<body style="background-color: #000000;"></body>
+</html>
