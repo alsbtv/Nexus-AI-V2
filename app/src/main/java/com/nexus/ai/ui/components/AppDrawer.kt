@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nexus.ai.data.ChatEntity
 import com.nexus.ai.ui.viewmodel.DrawerViewModel
 import kotlinx.coroutines.launch
 

@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -129,7 +131,7 @@ fun ChatScreen(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(messages) { message ->
+                            items(messages, key = { it.id }) { message ->
                                 MessageItem(
                                     message = message,
                                     onImageClick = { fullScreenImage = it },
@@ -277,6 +279,7 @@ fun ChatScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageItem(message: MessageEntity, onImageClick: (Uri) -> Unit, onEdit: () -> Unit, onPin: () -> Unit, onCopy: () -> Unit, onTTS: () -> Unit, onRegenerate: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start) {
