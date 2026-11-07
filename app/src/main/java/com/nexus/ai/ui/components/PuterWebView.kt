@@ -1,6 +1,7 @@
 package com.nexus.ai.ui.components
 
 import android.annotation.SuppressLint
+import android.os.Message
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -34,7 +35,22 @@ fun PuterWebView(
                 settings.setSupportMultipleWindows(true)
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 webViewClient = WebViewClient()
-                webChromeClient = WebChromeClient()
+
+                val popupWebView = WebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    webViewClient = WebViewClient()
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                }
+
+                webChromeClient = object : WebChromeClient() {
+                    override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
+                        val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                        transport.webView = popupWebView
+                        resultMsg.sendToTarget()
+                        return true
+                    }
+                }
                 addJavascriptInterface(object {
                     @JavascriptInterface fun onLoginSuccess(username: String) { onLoginSuccess(username) }
                     @JavascriptInterface fun onLoginError(error: String) { onLoginError(error) }
