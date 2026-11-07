@@ -19,19 +19,21 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # هذه الخطوة تقوم بتفعيل الكاش تلقائياً
-    - name: Setup Gradle
+    # إجبار البيئة على تحميل Gradle 8.2 بدلاً من 9.8.2
+    - name: Setup Gradle 8.2
       uses: gradle/actions/setup-gradle@v3
       with:
+        gradle-version: 8.2
         cache-read-only: false
 
-    # إجبار Gradle على استخدام الإصدار 8.2
-    - name: Generate Gradle Wrapper (Version 8.2)
-      run: gradle wrapper --gradle-version 8.2
+    # الآن سيقوم بإنشاء الـ wrapper باستخدام الإصدار 8.2
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # البناء باستخدام الـ wrapper
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
