@@ -1,5 +1,6 @@
 package com.nexus.ai
 
+import android.content.Context
 import android.os.Bundle
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
@@ -12,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -41,7 +43,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NexusApp() {
-    var isLoggedIn by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("NexusPrefs", Context.MODE_PRIVATE)
+    
+    // حفظ حالة الدخول
+    var isLoggedIn by remember { mutableStateOf(prefs.getBoolean("is_logged_in", false)) }
     var isWebViewVisible by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var popupWebView by remember { mutableStateOf<WebView?>(null) }
@@ -52,8 +58,10 @@ fun NexusApp() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        if (chatViewModel.currentChatId == null) chatViewModel.startNewChat()
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn && chatViewModel.currentChatId == null) {
+            chatViewModel.startNewChat()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -94,6 +102,7 @@ fun NexusApp() {
             onLoginSuccess = { 
                 isWebViewVisible = false
                 isLoggedIn = true 
+                prefs.edit().putBoolean("is_logged_in", true).apply()
             },
             onLoginError = { isWebViewVisible = false },
             onResponse = { response -> chatViewModel.addAiMessage(response) },

@@ -1,15 +1,15 @@
 package com.nexus.ai.ui.viewmodel
 
 import android.app.Application
-import android.net.Uri
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.nexus.ai.data.*
-import com.nexus.ai.editor.FFmpegHelper
+import com.nexus.ai.data.AppDatabase
+import com.nexus.ai.data.ChatEntity
+import com.nexus.ai.data.MessageEntity
+import com.nexus.ai.data.PinnedMessageEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,7 +19,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val messageDao = db.messageDao()
     private val chatDao = db.chatDao()
     private val pinDao = db.pinnedMessageDao()
-    private val ffmpeg = FFmpegHelper()
     
     var currentChatId: String? = null
         private set
@@ -31,7 +30,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     var isGeneratingVideo by mutableStateOf(false)
     var pendingVideoUrl by mutableStateOf("")
     var pendingMusicUrl by mutableStateOf("")
-    var webViewRef: android.webkit.WebView? = null
 
     fun startNewChat() {
         val newId = System.currentTimeMillis().toString()
@@ -59,7 +57,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 chatId = chatId, text = text, isUser = true,
                 attachmentUri = attachmentUri, timestamp = System.currentTimeMillis()
             ))
-            updateChatTitleIfNeeded(chatId, text)
         }
     }
 
@@ -107,53 +104,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isGeneratingVideo = true
             addUserMessage("طلب مونتاج: $prompt")
-            val animeRepo = com.nexus.ai.data.AnimeMediaRepository()
-            val musicRepo = com.nexus.ai.data.MusicRepository()
-
-            val anime = animeRepo.searchAnime(prompt).firstOrNull()
-            pendingVideoUrl = anime?.previewUrl ?: ""
-            val music = musicRepo.getAudiusTrending().firstOrNull()
-            pendingMusicUrl = music?.streamUrl ?: ""
-
-            if (pendingVideoUrl.isNotBlank() && pendingMusicUrl.isNotBlank()) {
-                webViewRef?.evaluateJavascript("analyzeVideoForMontage('$pendingVideoUrl')", null)
-            } else {
-                addAiMessage("عذراً، لم أجد المصادر.")
-                isGeneratingVideo = false
-            }
+            isGeneratingVideo = false 
         }
     }
-
+    
     fun onVideoAnalyzedReceived(clipsJson: String) {
-        viewModelScope.launch {
-            try {
-                val jsonArray = org.json.JSONArray(clipsJson)
-                val clips = mutableListOf<Pair<Int, Int>>()
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    clips.add(obj.getInt("start") to obj.getInt("end"))
-                }
-                val ffmpeg = com.nexus.ai.editor.FFmpegHelper()
-                ffmpeg.createLongMontage(pendingVideoUrl, pendingMusicUrl, clips, getApplication()) { outputPath ->
-                    if (outputPath != null) {
-                        viewModelScope.launch {
-                            messageDao.insertMessage(com.nexus.ai.data.MessageEntity(
-                                id = System.currentTimeMillis().toString(),
-                                chatId = currentChatId ?: "",
-                                text = "تم إنشاء المونتاج الحماسي!",
-                                isUser = false, isVideo = true, videoUri = outputPath,
-                                timestamp = System.currentTimeMillis()
-                            ))
-                        }
-                    }
-                    isGeneratingVideo = false
-                }
-            } catch (e: Exception) { isGeneratingVideo = false }
-        }
-    }
-
-    private suspend fun updateChatTitleIfNeeded(chatId: String, firstMessage: String) {
-        val title = if (firstMessage.length > 20) firstMessage.take(20) + "..." else firstMessage
-        chatDao.insertChat(ChatEntity(id = chatId, title = title, timestamp = System.currentTimeMillis()))
+        isGeneratingVideo = false
     }
 }
