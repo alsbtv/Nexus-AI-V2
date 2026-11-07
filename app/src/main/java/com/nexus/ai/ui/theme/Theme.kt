@@ -1,4 +1,5 @@
 package com.nexus.ai.ui.theme
+
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -22,7 +23,7 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun NexusTheme(
-    darkTheme: Boolean = true, // إجبار الوضع الداكن
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
@@ -30,14 +31,10 @@ fun NexusTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // شريط حالة شفاف
             window.statusBarColor = android.graphics.Color.TRANSPARENT
-            // إخفاء الأيقونات البيضاء في الوضع الداكن
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-
-            // جعل التطبيق يمتد خلف شريط الحالة (Edge-to-Edge)
             WindowCompat.setDecorFitsSystemWindows(window, false)
         }
     }
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = NexusTypography, content = content)
 }

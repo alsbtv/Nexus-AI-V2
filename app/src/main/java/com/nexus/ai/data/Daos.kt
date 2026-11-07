@@ -9,8 +9,6 @@ interface ChatDao {
     fun getAllChats(): Flow<List<ChatEntity>>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChat(chat: ChatEntity)
-    @Delete
-    suspend fun deleteChat(chat: ChatEntity)
     @Query("DELETE FROM chats WHERE id = :chatId")
     suspend fun deleteChatById(chatId: String)
 }

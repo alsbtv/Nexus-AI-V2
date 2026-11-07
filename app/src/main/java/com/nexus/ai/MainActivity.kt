@@ -50,7 +50,6 @@ fun NexusApp() {
     var isLoggedIn by remember { mutableStateOf(prefs.getBoolean("is_logged_in", false)) }
     var isWebViewVisible by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
-    var popupWebView by remember { mutableStateOf<WebView?>(null) }
     
     val chatViewModel: ChatViewModel = viewModel()
     val drawerViewModel: DrawerViewModel = viewModel()
@@ -66,10 +65,7 @@ fun NexusApp() {
         if (currentScreen == "settings") {
             SettingsScreen(
                 isLoggedIn = isLoggedIn,
-                onLoginClick = { 
-                    isWebViewVisible = true 
-                    webView?.evaluateJavascript("loginPuter()", null) 
-                },
+                onLoginClick = { isWebViewVisible = true; webView?.evaluateJavascript("loginPuter()", null) },
                 onClearChats = { chatViewModel.clearAllChats() },
                 onBackClick = { currentScreen = "chat" }
             )
@@ -95,43 +91,19 @@ fun NexusApp() {
         PuterWebView(
             isVisible = isWebViewVisible,
             onWebViewCreated = { webView = it },
-            onPopupCreated = { popupWebView = it },
-            onLoginSuccess = { 
-                isWebViewVisible = false
-                isLoggedIn = true 
-                prefs.edit().putBoolean("is_logged_in", true).apply()
-            },
+            onPopupCreated = { },
+            onLoginSuccess = { isWebViewVisible = false; isLoggedIn = true; prefs.edit().putBoolean("is_logged_in", true).apply() },
             onLoginError = { isWebViewVisible = false },
             onResponse = { response -> chatViewModel.addAiMessage(response) },
             onModelsLoaded = { },
-            onImageGenerated = { url -> chatViewModel.addImageMessage(url) },
-            onVideoAnalyzedCallback = { json -> chatViewModel.onVideoAnalyzedReceived(json) }
+            onImageGenerated = { },
+            onVideoAnalyzedCallback = { }
         )
 
         if (isWebViewVisible) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                IconButton(
-                    onClick = { isWebViewVisible = false; popupWebView?.destroy(); popupWebView = null },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-                ) {
+                IconButton(onClick = { isWebViewVisible = false }, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                }
-            }
-        }
-
-        if (popupWebView != null) {
-            Dialog(
-                onDismissRequest = { popupWebView?.destroy(); popupWebView = null }, 
-                properties = DialogProperties(usePlatformDefaultWidth = false)
-            ) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                    AndroidView(factory = { popupWebView!! }, modifier = Modifier.fillMaxSize())
-                    IconButton(
-                        onClick = { popupWebView?.destroy(); popupWebView = null },
-                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                    }
                 }
             }
         }
